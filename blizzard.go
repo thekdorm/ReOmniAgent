@@ -3,13 +3,32 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"golang.org/x/oauth2"
 )
 
-func ouathToken(codeChan chan string) *http.Client {
+const baseUrl string = "https://us.api.blizzard.com"
+const proudmooreRealmId int = 5
+
+var auctionHouseUrl string = fmt.Sprintf("/data/wow/connected-realm/%d/auctions", proudmooreRealmId)
+
+const namespace string = "dynamic-us"
+const locale string = "en_US"
+
+var urlQueries string = fmt.Sprintf("?namespace=%s&locale=%s", namespace, locale)
+
+func check(err error, message string) {
+	if err != nil {
+		formatted := fmt.Sprintf("%s\n%s", message, err)
+		log.Fatal(formatted)
+	}
+}
+
+func oauthToken(codeChan chan string) *http.Client {
 	// From: https://pkg.go.dev/golang.org/x/oauth2#example-Config
 
 	id := Id
@@ -39,9 +58,8 @@ func ouathToken(codeChan chan string) *http.Client {
 	log.Println("Code: " + code)
 
 	tok, err := conf.Exchange(ctx, code)
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err, "Token couldn't be exchanged!")
+
 	log.Println("Token: " + tok.AccessToken)
 
 	return conf.Client(ctx, tok)
@@ -62,5 +80,18 @@ func main() {
 	codeChan := make(chan string)
 
 	go server(codeChan)
-	ouathToken(codeChan)
+	client := oauthToken(codeChan)
+	client.Timeout = 60 * time.Second // Auction House results take a while to come back
+	close(codeChan)
+
+	reqUrl := baseUrl + auctionHouseUrl + urlQueries
+	fmt.Println(reqUrl)
+	rsp, err := client.Get(reqUrl)
+	check(err, "No response received!")
+
+	defer rsp.Body.Close()
+	body, err := io.ReadAll(rsp.Body)
+	check(err, "No response body could be read!")
+
+	fmt.Println(string(body))
 }
