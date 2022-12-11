@@ -19,7 +19,6 @@ func ouathToken(codeChan chan string) *http.Client {
 	conf := &oauth2.Config{
 		ClientID:     id,
 		ClientSecret: secret,
-		Scopes:       []string{},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  "https://oauth.battle.net/authorize",
 			TokenURL: "https://oauth.battle.net/token",
