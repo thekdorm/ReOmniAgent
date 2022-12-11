@@ -9,53 +9,59 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func ouathToken() {
+func ouathToken(codeChan chan string) *http.Client {
+	// From: https://pkg.go.dev/golang.org/x/oauth2#example-Config
+
+	id := Id
+	secret := Secret
+
 	ctx := context.Background()
 	conf := &oauth2.Config{
-		ClientID:     "",
-		ClientSecret: "",
+		ClientID:     id,
+		ClientSecret: secret,
 		Scopes:       []string{},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  "https://oauth.battle.net/authorize",
 			TokenURL: "https://oauth.battle.net/token",
 		},
-		RedirectURL: "https://localhost/blizzard/wow/api",
+		RedirectURL: "https://localhost:8000/blizzard/wow/api",
 	}
 
 	// Redirect user to consent page to ask for permission
 	// for the scopes specified above.
 	url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
-	fmt.Printf("Visit the URL for the auth dialog: %v", url)
+	log.Printf("Visit the URL for the auth dialog: %v", url)
 
 	// Use the authorization code that is pushed to the redirect
 	// URL. Exchange will do the handshake to retrieve the
 	// initial access token. The HTTP Client returned by
 	// conf.Client will refresh the token as necessary.
-	var code string
-	if _, err := fmt.Scan(&code); err != nil {
-		log.Fatal(err)
-	}
+	code := <-codeChan
+	log.Println("Code: " + code)
+
 	tok, err := conf.Exchange(ctx, code)
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Token: " + tok.AccessToken)
 
-	client := conf.Client(ctx, tok)
-	client.Get("...")
+	return conf.Client(ctx, tok)
 }
 
-func server() {
+func server(codeChan chan<- string) {
 	http.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
 		fmt.Fprint(res, "Hello World!")
 	})
 	http.HandleFunc("/blizzard/wow/api", func(res http.ResponseWriter, req *http.Request) {
-		fmt.Println(req.URL)
+		codeChan <- req.URL.Query().Get("code")
 	})
 
-	log.Fatal(http.ListenAndServeTLS(":8000", "localhost.crt", "localhost.key", nil))
+	log.Fatal(http.ListenAndServeTLS(":8000", "certs/localhost.crt", "certs/localhost.key", nil))
 }
 
 func main() {
-	go server()
-	ouathToken()
+	codeChan := make(chan string)
+
+	go server(codeChan)
+	ouathToken(codeChan)
 }
