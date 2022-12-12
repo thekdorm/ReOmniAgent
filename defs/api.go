@@ -47,6 +47,12 @@ type Commodity struct {
 	id int32
 }
 
+type QualityCommodity struct {
+	Tier1 Commodity
+	Tier2 Commodity
+	Tier3 Commodity
+}
+
 func (commodity Commodity) Id() int32 {
 	return commodity.id
 }
