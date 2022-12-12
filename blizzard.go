@@ -1,25 +1,19 @@
 package main
 
 import (
+	"blizzard/defs"
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"golang.org/x/oauth2"
 )
-
-const baseUrl string = "https://us.api.blizzard.com"
-const proudmooreRealmId int = 5
-
-var auctionHouseUrl string = fmt.Sprintf("/data/wow/connected-realm/%d/auctions", proudmooreRealmId)
-
-const namespace string = "dynamic-us"
-const locale string = "en_US"
-
-var urlQueries string = fmt.Sprintf("?namespace=%s&locale=%s", namespace, locale)
 
 func check(err error, message string) {
 	if err != nil {
@@ -76,6 +70,14 @@ func server(codeChan chan<- string) {
 	log.Fatal(http.ListenAndServeTLS(":8000", "certs/localhost.crt", "certs/localhost.key", nil))
 }
 
+func writePrettyRspToFile(filename string, rsp []byte) {
+	var prettyRsp bytes.Buffer
+	err := json.Indent(&prettyRsp, rsp, "", "    ")
+	check(err, "Couldn't format JSON response body!")
+
+	os.WriteFile(filename, prettyRsp.Bytes(), 0644)
+}
+
 func main() {
 	codeChan := make(chan string)
 
@@ -84,8 +86,7 @@ func main() {
 	client.Timeout = 60 * time.Second // Auction House results take a while to come back
 	close(codeChan)
 
-	reqUrl := baseUrl + auctionHouseUrl + urlQueries
-	fmt.Println(reqUrl)
+	reqUrl := defs.BaseUrl + defs.AuctionHouseUrl + defs.UrlQueries
 	rsp, err := client.Get(reqUrl)
 	check(err, "No response received!")
 
@@ -93,5 +94,21 @@ func main() {
 	body, err := io.ReadAll(rsp.Body)
 	check(err, "No response body could be read!")
 
-	fmt.Println(string(body))
+	writePrettyRspToFile("auctions.txt", body)
+
+	reqUrl = defs.BaseUrl + defs.CommoditiesUrl + defs.UrlQueries
+	rsp, err = client.Get(reqUrl)
+	check(err, "No response received!")
+
+	body, err = io.ReadAll(rsp.Body)
+	check(err, "No response body could be read!")
+
+	writePrettyRspToFile("commodities.txt", body)
+
+	auctions := defs.AuctionJson{}
+	err = json.Unmarshal([]byte(body), &auctions)
+	check(err, "Couldn't Unmarshal JSON response body!")
+
+	fmt.Println("Response _links: " + auctions.Links.Self.Href)
+	fmt.Println("Response connected_realm: " + auctions.ConnectedRealm.Href)
 }
