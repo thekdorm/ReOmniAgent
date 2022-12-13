@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -41,6 +42,7 @@ func oauthToken(codeChan chan string) *http.Client {
 
 	// Redirect user to consent page to ask for permission
 	// for the scopes specified above.
+	// TODO: Make this happen automatically
 	url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
 	log.Printf("Visit the URL for the auth dialog: %v", url)
 
@@ -79,6 +81,9 @@ func writePrettyRspToFile(filename string, rsp []byte) {
 }
 
 func main() {
+	debug := flag.Bool("debug", false, "Enable debug functions")
+	flag.Parse()
+
 	codeChan := make(chan string)
 
 	go server(codeChan)
@@ -94,7 +99,9 @@ func main() {
 	body, err := io.ReadAll(rsp.Body)
 	check(err, "No response body could be read!")
 
-	writePrettyRspToFile("auctions.txt", body)
+	if *debug {
+		writePrettyRspToFile("auctions.txt", body)
+	}
 
 	reqUrl = defs.BaseUrl + defs.CommoditiesUrl + defs.UrlQueries
 	rsp, err = client.Get(reqUrl)
@@ -103,7 +110,9 @@ func main() {
 	body, err = io.ReadAll(rsp.Body)
 	check(err, "No response body could be read!")
 
-	writePrettyRspToFile("commodities.txt", body)
+	if *debug {
+		writePrettyRspToFile("commodities.txt", body)
+	}
 
 	auctions := defs.AuctionJson{}
 	err = json.Unmarshal([]byte(body), &auctions)
