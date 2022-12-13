@@ -1,4 +1,4 @@
-module blizzard
+module reomniagent
 
 go 1.19
 

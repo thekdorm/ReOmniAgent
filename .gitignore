@@ -1,4 +1,5 @@
-certs/
+*.crt
+*.key
 *.txt
 
-secrets.go
+*secrets.go
