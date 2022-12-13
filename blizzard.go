@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -15,6 +16,9 @@ import (
 
 	"golang.org/x/oauth2"
 )
+
+const filenameAuctions string = "auctions.txt"
+const filenameCommodities string = "commodities.txt"
 
 func check(err error, message string) {
 	if err != nil {
@@ -82,44 +86,68 @@ func writePrettyRspToFile(filename string, rsp []byte) {
 
 func main() {
 	debug := flag.Bool("debug", false, "Enable debug functions")
+	full := flag.Bool("full", false, "Full program execution (Oauth2 + live API)")
 	flag.Parse()
 
-	codeChan := make(chan string)
+	if *full {
+		codeChan := make(chan string)
 
-	go server(codeChan)
-	client := oauthToken(codeChan)
-	client.Timeout = 60 * time.Second // Auction House results take a while to come back
-	close(codeChan)
+		go server(codeChan)
+		client := oauthToken(codeChan)
+		client.Timeout = 60 * time.Second // Auction House results take a while to come back
+		close(codeChan)
 
-	reqUrl := defs.BaseUrl + defs.AuctionHouseUrl + defs.UrlQueries
-	rsp, err := client.Get(reqUrl)
-	check(err, "No response received!")
+		reqUrl := defs.BaseUrl + defs.CommoditiesUrl + defs.UrlQueries
+		rsp, err := client.Get(reqUrl)
+		check(err, "No response received!")
 
-	defer rsp.Body.Close()
-	body, err := io.ReadAll(rsp.Body)
-	check(err, "No response body could be read!")
+		body, err := io.ReadAll(rsp.Body)
+		check(err, "No response body could be read!")
+		rsp.Body.Close()
 
-	if *debug {
-		writePrettyRspToFile("auctions.txt", body)
-	}
+		if *debug {
+			writePrettyRspToFile(filenameCommodities, body)
+		}
 
-	reqUrl = defs.BaseUrl + defs.CommoditiesUrl + defs.UrlQueries
-	rsp, err = client.Get(reqUrl)
-	check(err, "No response received!")
+		auctions := defs.AuctionHouseJson{}
+		err = json.Unmarshal([]byte(body), &auctions)
+		check(err, "Couldn't Unmarshal JSON response body!")
 
-	body, err = io.ReadAll(rsp.Body)
-	check(err, "No response body could be read!")
+		if *debug {
+			fmt.Println("Response _links: " + auctions.Links.Self.Href)
+			fmt.Println("Response connected_realm: " + auctions.ConnectedRealm.Href)
+		}
+	} else {
+		commoditiesFile, err := os.Open(filenameCommodities)
+		check(err, fmt.Sprintf("Couldn't open '%s'!", filenameCommodities))
 
-	if *debug {
-		writePrettyRspToFile("commodities.txt", body)
-	}
+		commoditiesContents, err := ioutil.ReadAll(commoditiesFile)
+		check(err, fmt.Sprintf("Couldn't read from opened file '%s'!", filenameCommodities))
+		commoditiesFile.Close()
 
-	auctions := defs.AuctionJson{}
-	err = json.Unmarshal([]byte(body), &auctions)
-	check(err, "Couldn't Unmarshal JSON response body!")
+		commodities := defs.CommoditiesJson{}
+		err = json.Unmarshal([]byte(commoditiesContents), &commodities)
+		check(err, "Couldn't Unmarshal JSON file contents!")
 
-	if *debug {
-		fmt.Println("Response _links: " + auctions.Links.Self.Href)
-		fmt.Println("Response connected_realm: " + auctions.ConnectedRealm.Href)
+		fmt.Println("Number of Auctions: " + fmt.Sprint(len(commodities.Auctions)))
+
+		for i := 0; i < len(defs.Essences); i++ {
+			cheapest := defs.CommodityJson{UnitPrice: -1}
+			id := defs.Essences[i].Id()
+
+			for j := 0; j < len(commodities.Auctions); j++ {
+				auctionPtr := &commodities.Auctions[j]
+
+				if (auctionPtr.Item.Id == id && cheapest.UnitPrice == -1) ||
+					(auctionPtr.Item.Id == id && commodities.Auctions[j].UnitPrice < cheapest.UnitPrice) {
+					if *debug {
+						fmt.Printf("Commodity: %s\tOld Price: %v\tCheaper Price: %v\n", cheapest.Name, cheapest.UnitPrice, auctionPtr.UnitPrice)
+					}
+					cheapest = *auctionPtr
+				}
+			}
+
+			fmt.Printf("%s cheapest: %v\n", defs.Essences[i].Name, cheapest.UnitPrice)
+		}
 	}
 }

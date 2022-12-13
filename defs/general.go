@@ -1,65 +1,17 @@
 package defs
 
-type essences struct {
-	AwakenedAir   Commodity
-	AwakenedDecay Commodity
-	AwakenedEarth Commodity
-	AwakenedFire  Commodity
-	AwakenedFrost Commodity
-	// AwakenedIre   Commodity
-	// AwakenedOrder Commodity
+var Essences = [12]Commodity{
+	{id: 190327, Name: "Awakened Air"},
+	{id: 190331, Name: "Awakened Decay"},
+	{id: 190316, Name: "Awakened Earth"},
+	{id: 190321, Name: "Awakened Fire"},
+	{id: 190329, Name: "Awakened Frost"},
 
-	RousingAir   Commodity
-	RousingDecay Commodity
-	RousingEarth Commodity
-	RousingFire  Commodity
-	RousingFrost Commodity
-	RousingIre   Commodity
-	RousingOrder Commodity
-}
-
-var Essences = essences{
-	AwakenedAir: Commodity{
-		id: 190327,
-	},
-	AwakenedDecay: Commodity{
-		id: 190331,
-	},
-	AwakenedEarth: Commodity{
-		id: 190316,
-	},
-	AwakenedFire: Commodity{
-		id: 190321,
-	},
-	AwakenedFrost: Commodity{
-		id: 190329,
-	},
-	// AwakenedIre: Commodity{
-	// 	id: ,
-	// },
-	// AwakenedOrder: Commodity{
-	// 	id: ,
-	// },
-
-	RousingAir: Commodity{
-		id: 190326,
-	},
-	RousingDecay: Commodity{
-		id: 190330,
-	},
-	RousingEarth: Commodity{
-		id: 190315,
-	},
-	RousingFire: Commodity{
-		id: 190320,
-	},
-	RousingFrost: Commodity{
-		id: 190328,
-	},
-	RousingIre: Commodity{
-		id: 190451,
-	},
-	RousingOrder: Commodity{
-		id: 190322,
-	},
+	{id: 190326, Name: "Rousing Air"},
+	{id: 190330, Name: "Rousing Decay"},
+	{id: 190315, Name: "Rousing Earth"},
+	{id: 190320, Name: "Rousing Fire"},
+	{id: 190328, Name: "Rousing Frost"},
+	{id: 190451, Name: "Rousing Ire"},
+	{id: 190322, Name: "Rousing Order"},
 }

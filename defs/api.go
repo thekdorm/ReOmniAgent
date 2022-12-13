@@ -11,7 +11,7 @@ var AuctionHouseUrl string = fmt.Sprintf("/data/wow/connected-realm/%d/auctions"
 var CommoditiesUrl string = "/data/wow/auctions/commodities"
 var UrlQueries string = fmt.Sprintf("?namespace=%s&locale=%s", Namespace, Locale)
 
-type AuctionJson struct {
+type AuctionHouseJson struct {
 	Links struct {
 		Self struct {
 			Href string `json:"href"`
@@ -43,8 +43,26 @@ type AuctionJson struct {
 	} `json:"commodities"`
 }
 
+type CommodityJson struct {
+	Id   int32 `json:"id"`
+	Item struct {
+		Id int32 `json:"id"`
+	} `json:"item"`
+	Quantity  int32  `json:"quantity"`
+	UnitPrice int64  `json:"unit_price"`
+	TimeLeft  string `json:"time_left"`
+
+	Name string
+}
+
+type CommoditiesJson struct {
+	Auctions []CommodityJson `json:"auctions"`
+}
+
 type Commodity struct {
 	id int32
+
+	Name string
 }
 
 type QualityCommodity struct {
