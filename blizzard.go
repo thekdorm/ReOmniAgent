@@ -118,6 +118,8 @@ func main() {
 	err = json.Unmarshal([]byte(body), &auctions)
 	check(err, "Couldn't Unmarshal JSON response body!")
 
-	fmt.Println("Response _links: " + auctions.Links.Self.Href)
-	fmt.Println("Response connected_realm: " + auctions.ConnectedRealm.Href)
+	if *debug {
+		fmt.Println("Response _links: " + auctions.Links.Self.Href)
+		fmt.Println("Response connected_realm: " + auctions.ConnectedRealm.Href)
+	}
 }
